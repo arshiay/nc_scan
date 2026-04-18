@@ -328,10 +328,39 @@ def save_results(results: list[ProbeResult], cfg: Config) -> None:
 
 async def async_main() -> int:
     parser = argparse.ArgumentParser(description="nc_scan (Python)")
-    parser.add_argument("--config", default="config.yaml", help="Path to config yaml file")
+    parser.add_argument("--config", "-c", default="config.yaml", help="Path to config yaml file")
+    parser.add_argument("-i", "--ips", help="Scan targets: CSV/list/range (overrides config ips)")
+    parser.add_argument("-p", "--ports", help="Ports: CSV/list/range (overrides config ports)")
+    parser.add_argument("-t", "--timeout", type=float, help="Timeout in seconds per attempt")
+    parser.add_argument("--open-only", action="store_true", help="Show/save only open ports")
+    parser.add_argument("--concurrency", type=int, help="Max concurrent probes")
+    parser.add_argument("--tls-handshake", action="store_true", help="Enable TCP connect + TLS handshake probing")
+    parser.add_argument(
+        "--tcp-only",
+        action="store_true",
+        help="Force TCP-only probing (disables TLS handshake)",
+    )
+    parser.add_argument("-o", "--output", help="Output file path (overrides config output_file)")
     args = parser.parse_args()
 
     cfg = load_config(Path(args.config).resolve())
+    if args.ips is not None:
+        cfg.targets = expand_ips(args.ips)
+    if args.ports is not None:
+        cfg.ports = expand_ports(args.ports)
+    if args.timeout is not None:
+        cfg.timeout_s = args.timeout
+    if args.open_only:
+        cfg.open_only = True
+    if args.concurrency is not None:
+        cfg.concurrency = max(1, args.concurrency)
+    if args.tcp_only:
+        cfg.tls_handshake = False
+    elif args.tls_handshake:
+        cfg.tls_handshake = True
+    if args.output is not None:
+        cfg.output_file = args.output.strip() or None
+
     started = time.perf_counter()
     results = await run_scan(cfg)
     elapsed_s = time.perf_counter() - started
