@@ -368,12 +368,36 @@ def probe(host: str, port: int, cfg: Config) -> ProbeResult:
 async def run_scan(cfg: Config) -> list[ProbeResult]:
     semaphore = asyncio.Semaphore(cfg.concurrency)
     targets = [(host, port) for host in cfg.targets for port in cfg.ports]
+    total = len(targets)
+    if total == 0:
+        return []
 
     async def one(host: str, port: int) -> ProbeResult:
         async with semaphore:
             return await asyncio.to_thread(probe, host, port, cfg)
 
-    return await asyncio.gather(*(one(h, p) for h, p in targets))
+    async def one_indexed(idx: int, host: str, port: int) -> tuple[int, ProbeResult]:
+        return idx, await one(host, port)
+
+    def render_progress(done: int) -> None:
+        bar_width = 30
+        fill = int((done / total) * bar_width)
+        bar = "#" * fill + "-" * (bar_width - fill)
+        print(f"\rProgress: [{bar}] {done}/{total}", end="", flush=True)
+
+    tasks = [asyncio.create_task(one_indexed(idx, h, p)) for idx, (h, p) in enumerate(targets)]
+    ordered_results: list[ProbeResult | None] = [None] * total
+    completed = 0
+
+    render_progress(completed)
+    for finished in asyncio.as_completed(tasks):
+        idx, result = await finished
+        ordered_results[idx] = result
+        completed += 1
+        render_progress(completed)
+
+    print()
+    return [result for result in ordered_results if result is not None]
 
 
 def display(results: list[ProbeResult], cfg: Config) -> None:

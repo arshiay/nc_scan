@@ -7,6 +7,7 @@ A fast concurrent TCP/TLS port scanner using a YAML config file.
 - TCP connect mode (`tls_handshake: false`)
 - TCP + TLS handshake mode (`tls_handshake: true`)
 - Concurrent scanning (`concurrency` setting)
+- Live progress bar during scanning
 - Hostname and IPv4 range expansion (`10.0.0.1-10.0.0.20`)
 - Optional `open_only` filtering
 - Optional output file export
