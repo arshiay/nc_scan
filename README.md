@@ -10,6 +10,7 @@ A fast concurrent TCP/TLS port scanner using a YAML config file.
 - Hostname and IPv4 range expansion (`10.0.0.1-10.0.0.20`)
 - Optional `open_only` filtering
 - Optional output file export
+- Optional known subdomain discovery (`find_subdomains`)
 
 ## Install
 
@@ -31,6 +32,7 @@ concurrency: 200
 tls_handshake: true
 open_only: false
 output_file: results.txt
+find_subdomains: false
 ```
 
 ## Usage
@@ -39,6 +41,7 @@ output_file: results.txt
 python nc_scan.py
 python nc_scan.py --config ./config.yaml
 python nc_scan.py -i "hcaptcha.com,1.1.1.1" -p "443,8443" -o out.txt --tls-handshake
+python nc_scan.py -i "example.com" -p "443" --find-subdomains
 ```
 
 ### CLI overrides
@@ -53,6 +56,7 @@ CLI flags override values from `config.yaml`.
 - `--concurrency` max concurrent probes
 - `--tls-handshake` force TLS probe mode
 - `--tcp-only` force TCP-only probe mode
+- `--find-subdomains` discover known subdomains from crt.sh for each domain target
 - `-o, --output` output file path (`""` to disable)
 
 ## Output statuses
