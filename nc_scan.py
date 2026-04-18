@@ -426,7 +426,9 @@ def display(results: list[ProbeResult], cfg: Config) -> None:
 def save_results(results: list[ProbeResult], cfg: Config) -> None:
     if not cfg.output_file:
         return
-    out = Path(cfg.output_file)
+    base_out = Path(cfg.output_file)
+    timestamp = datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
+    out = base_out.with_name(f"{base_out.stem}_{timestamp}{base_out.suffix}")
     lines = [
         f"# nc_scan results — {datetime.now(timezone.utc).isoformat()}",
         f"# mode: {'TCP+TLS' if cfg.tls_handshake else 'TCP only'}",
@@ -443,6 +445,7 @@ def save_results(results: list[ProbeResult], cfg: Config) -> None:
     open_count = sum(1 for r in results if r.status == "open")
     lines.append(f"# {open_count} open / {len(results)} total")
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"Saved results to: {out}")
 
 
 async def async_main() -> int:
