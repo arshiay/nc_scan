@@ -6,9 +6,8 @@
 - **TCP connect** and **TCP + TLS handshake** probe modes (toggle with `t`)
 - Concurrent scanning with configurable concurrency
 - Interactive TUI: navigate, re-scan, filter, sort, copy results
-- YAML config file (`nc_scan.yaml`)
-- Cross-platform: macOS, Linux, Windows
 
+  
 ## Install
 
 Download the latest binary for your platform from [Releases](../../releases).
