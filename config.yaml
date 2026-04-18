@@ -1,0 +1,33 @@
+# ============================================================
+#  nc_scan config — edit this file to configure your scan
+# ============================================================
+ 
+# --- IPs to scan ---
+# Formats supported:
+#   single:  104.19.229.21
+#   range:   10.0.0.1-10.0.0.20
+#   list:    10.0.0.1, 10.0.0.5, 10.0.0.10
+ips: 104.19.229.21, 104.18.5.130, 104.18.4.130, 104.19.230.21, hcaptcha.com, hcaptcha.com, newassets.hcaptcha.com, js.hcaptcha.com, imgs.hcaptcha.com, imgs2.hcaptcha.com, imgs3.hcaptcha.com, assets.hcaptcha.com, api.hcaptcha.com, analytics.hcaptcha.com, stats.hcaptcha.com, three-cust.hcaptcha.com, tg.hcaptcha.com, primary.hcaptcha.com, dashboard.hcaptcha.com, billing.hcaptcha.com, accounts.hcaptcha.com, proxy.hcaptcha.com, loader.hcaptcha.com, challenge-tasks.hcaptcha.com, serverless.hcaptcha.com, health-check.hcaptcha.com, email.hcaptcha.com
+ 
+# --- Ports to scan ---
+# Formats supported:
+#   single:  443
+#   range:   80-90
+#   list:    22, 80, 443, 8080
+ports: 443
+# ports: 443, 8080, 8443, 2083, 2087, 2053, 80
+ 
+# --- Timeout in seconds per connection attempt ---
+timeout: 2
+ 
+# --- Only show open ports? (true/false) ---
+open_only: false
+ 
+# --- Save results to a file (leave empty to skip) ---
+output_file: results.txt
+
+
+# --- Probe mode ---
+# true  = TCP connect + TLS handshake (catches ports that accept TCP but block TLS; also shows resolved IP)
+# false = TCP connect only (faster, same as nc -zv)
+tls_handshake: true
