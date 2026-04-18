@@ -123,6 +123,41 @@ def expand_ips(raw: Any) -> list[str]:
     return targets
 
 
+def expand_targets_from_lines(lines: list[str]) -> list[str]:
+    targets: list[str] = []
+    seen: set[str] = set()
+
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+
+        if "://" in line:
+            parsed = urllib.parse.urlparse(line)
+            candidate = parsed.hostname or ""
+        else:
+            candidate = line
+
+        candidate = candidate.strip()
+        if not candidate:
+            continue
+        if candidate not in seen:
+            seen.add(candidate)
+            targets.append(candidate)
+
+    return targets
+
+
+def load_targets_from_txt(path: Path) -> list[str]:
+    if not path.exists():
+        raise FileNotFoundError(f"Input file not found: {path}")
+    lines = path.read_text(encoding="utf-8").splitlines()
+    targets = expand_targets_from_lines(lines)
+    if not targets:
+        raise ValueError(f"No valid targets found in input file: {path}")
+    return targets
+
+
 def is_raw_ip(value: str) -> bool:
     try:
         ipaddress.ip_address(value)
@@ -390,6 +425,10 @@ async def async_main() -> int:
     parser = argparse.ArgumentParser(description="nc_scan (Python)")
     parser.add_argument("--config", "-c", default="config.yaml", help="Path to config yaml file")
     parser.add_argument("-i", "--ips", help="Scan targets: CSV/list/range (overrides config ips)")
+    parser.add_argument(
+        "--input-file",
+        help="TXT file with one host/URL per line (overrides config ips and --ips)",
+    )
     parser.add_argument("-p", "--ports", help="Ports: CSV/list/range (overrides config ports)")
     parser.add_argument("-t", "--timeout", type=float, help="Timeout in seconds per attempt")
     parser.add_argument("--open-only", action="store_true", help="Show/save only open ports")
@@ -411,6 +450,8 @@ async def async_main() -> int:
     cfg = load_config(Path(args.config).resolve())
     if args.ips is not None:
         cfg.targets = expand_ips(args.ips)
+    if args.input_file is not None:
+        cfg.targets = load_targets_from_txt(Path(args.input_file).resolve())
     if args.ports is not None:
         cfg.ports = expand_ports(args.ports)
     if args.timeout is not None:
