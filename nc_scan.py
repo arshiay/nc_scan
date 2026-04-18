@@ -5,10 +5,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import ipaddress
 import socket
 import ssl
 import time
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,6 +55,7 @@ class Config:
     output_file: str | None
     concurrency: int
     tls_handshake: bool
+    find_subdomains: bool
 
 
 @dataclass(slots=True)
@@ -144,6 +148,7 @@ def load_config(config_path: Path) -> Config:
         output_file=output_file,
         concurrency=max(1, int(raw.get("concurrency", 200))),
         tls_handshake=str(raw.get("tls_handshake", "false")).lower() == "true",
+        find_subdomains=str(raw.get("find_subdomains", "false")).lower() == "true",
     )
 
 
@@ -205,6 +210,61 @@ def resolve_host(host: str) -> list[str]:
             seen.add(ip)
             ips.append(ip)
     return ips
+
+
+def discover_subdomains(domain: str, timeout_s: float) -> list[str]:
+    """
+    Discover known subdomains from certificate transparency logs (crt.sh).
+
+    This is a best-effort enumeration source and may not include every subdomain.
+    """
+    query = urllib.parse.quote(domain, safe="")
+    url = f"https://crt.sh/?q=%25.{query}&output=json"
+    request = urllib.request.Request(url, headers={"User-Agent": "nc_scan/1.0"})
+
+    with urllib.request.urlopen(request, timeout=timeout_s) as response:
+        payload = response.read().decode("utf-8", errors="replace")
+
+    rows = json.loads(payload)
+    found: set[str] = set()
+    for row in rows:
+        names = str(row.get("name_value", "")).splitlines()
+        for name in names:
+            candidate = name.strip().lower()
+            if candidate.startswith("*."):
+                candidate = candidate[2:]
+            if not candidate:
+                continue
+            if candidate == domain or candidate.endswith(f".{domain}"):
+                found.add(candidate)
+    return sorted(found)
+
+
+def maybe_expand_subdomains(targets: list[str], enabled: bool, timeout_s: float) -> list[str]:
+    if not enabled:
+        return targets
+
+    expanded: list[str] = []
+    seen: set[str] = set()
+    for target in targets:
+        if target not in seen:
+            seen.add(target)
+            expanded.append(target)
+
+        if is_raw_ip(target):
+            continue
+
+        try:
+            discovered = discover_subdomains(target, timeout_s)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[warn] subdomain discovery failed for {target}: {exc}")
+            continue
+
+        for subdomain in discovered:
+            if subdomain not in seen:
+                seen.add(subdomain)
+                expanded.append(subdomain)
+    return expanded
 
 
 def probe_tls(host: str, port: int, timeout_s: float) -> tuple[bool, str | None, int, str | None, bool]:
@@ -336,6 +396,11 @@ async def async_main() -> int:
     parser.add_argument("--concurrency", type=int, help="Max concurrent probes")
     parser.add_argument("--tls-handshake", action="store_true", help="Enable TCP connect + TLS handshake probing")
     parser.add_argument(
+        "--find-subdomains",
+        action="store_true",
+        help="Discover known subdomains for domain targets before scanning",
+    )
+    parser.add_argument(
         "--tcp-only",
         action="store_true",
         help="Force TCP-only probing (disables TLS handshake)",
@@ -360,6 +425,10 @@ async def async_main() -> int:
         cfg.tls_handshake = True
     if args.output is not None:
         cfg.output_file = args.output.strip() or None
+    if args.find_subdomains:
+        cfg.find_subdomains = True
+
+    cfg.targets = maybe_expand_subdomains(cfg.targets, cfg.find_subdomains, cfg.timeout_s)
 
     started = time.perf_counter()
     results = await run_scan(cfg)

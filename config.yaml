@@ -31,3 +31,8 @@ output_file: results.txt
 # true  = TCP connect + TLS handshake (catches ports that accept TCP but block TLS; also shows resolved IP)
 # false = TCP connect only (faster, same as nc -zv)
 tls_handshake: true
+
+# --- Subdomain discovery ---
+# true  = discover known subdomains (crt.sh) for domain targets before scanning
+# false = scan only targets explicitly listed in ips
+find_subdomains: false
