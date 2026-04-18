@@ -42,7 +42,14 @@ python nc_scan.py
 python nc_scan.py --config ./config.yaml
 python nc_scan.py -i "hcaptcha.com,1.1.1.1" -p "443,8443" -o out.txt --tls-handshake
 python nc_scan.py -i "example.com" -p "443" --find-subdomains
+python nc_scan.py --input-file ./targets.txt -p "80,443"
 ```
+
+`--input-file` accepts a `.txt` file where each line is either:
+- a URL (for example `https://example.com/path`) or
+- a plain host/IP (for example `example.com` or `1.1.1.1`)
+
+Blank lines and lines starting with `#` are ignored.
 
 ### CLI overrides
 
@@ -50,6 +57,7 @@ CLI flags override values from `config.yaml`.
 
 - `-c, --config` path to config file
 - `-i, --ips` targets (single/list/range format from config)
+- `--input-file` TXT file with one URL/host per line
 - `-p, --ports` ports (single/list/range format from config)
 - `-t, --timeout` timeout in seconds
 - `--open-only` only display/save open results
